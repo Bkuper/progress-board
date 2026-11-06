@@ -216,7 +216,7 @@ g.textContent = D.greetings[0];
 setInterval(() => {
   g.classList.add('out');
   setTimeout(() => { gi = (gi + 1) % D.greetings.length; g.textContent = D.greetings[gi]; g.classList.remove('out'); }, 1400);
-}, 9000);
+}, 6500);
 
 // now
 $('now-label').textContent = `What ${D.name} is working on`;
