@@ -213,6 +213,8 @@ const logs = [...D.logs].sort((a, b) => b.date.localeCompare(a.date));
 // rotating greeting
 const g = $('greet'); let gi = 0;
 g.textContent = D.greetings[0];
+g.classList.add('out'); // fade the first one in too, so it stays up as long as the others
+requestAnimationFrame(() => requestAnimationFrame(() => g.classList.remove('out')));
 setInterval(() => {
   g.classList.add('out');
   setTimeout(() => { gi = (gi + 1) % D.greetings.length; g.textContent = D.greetings[gi]; g.classList.remove('out'); }, 1400);
