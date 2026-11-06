@@ -1,7 +1,7 @@
 # Progress board
 
 `index.html` is Ben's progress board, shown to his boss Baron. It's hosted on GitHub Pages:
-https://doublenang69.github.io/progress-board/ (repo: Doublenang69/progress-board, branch `main`, public).
+https://bkuper.github.io/progress-board/ (repo: Bkuper/progress-board, branch `main`, public). The GitHub username was renamed from Doublenang69 to Bkuper on 2026-11-06; the old doublenang69.github.io link no longer works.
 
 Only edit the JSON in `<script id="data">` at the top of `index.html`, then commit and `git push`. The site updates within a minute or two. (The old claude.ai Artifact copy is retired; don't publish there.)
 
