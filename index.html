@@ -215,10 +215,15 @@ const g = $('greet'); let gi = 0;
 g.textContent = D.greetings[0];
 g.classList.add('out'); // fade the first one in too, so it stays up as long as the others
 requestAnimationFrame(() => requestAnimationFrame(() => g.classList.remove('out')));
-setInterval(() => {
+const stay = () => gi === 0 ? 5000 : 6500; // "Hello, Baron" gets a shorter turn
+const next = () => {
   g.classList.add('out');
-  setTimeout(() => { gi = (gi + 1) % D.greetings.length; g.textContent = D.greetings[gi]; g.classList.remove('out'); }, 1400);
-}, 6500);
+  setTimeout(() => {
+    gi = (gi + 1) % D.greetings.length; g.textContent = D.greetings[gi]; g.classList.remove('out');
+    setTimeout(next, stay());
+  }, 1400);
+};
+setTimeout(next, stay());
 
 // now
 $('now-label').textContent = `What ${D.name} is working on`;
