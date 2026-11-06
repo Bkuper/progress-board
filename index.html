@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ben's Progress Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Martian+Mono:wght@400;600&display=swap">
+
+<!--
+  ===== THE ONLY PART YOU EDIT =====
+  greetings: rotating titles for Baron
+  status:    one of: Deep focus, Available, In meetings, Researching, Wrapping up, Out today, On leave, Sick (null hides it)
+  now:       what Ben is working on right now
+  needs:     things Ben needs from Baron (empty list hides the box)
+  logs:      one entry per day (any order). hours optional.
+  reports:   weekly summary dot points, keyed by the Sunday that starts that week (YYYY-MM-DD)
+-->
+<script id="data" type="application/json">
+{
+  "name": "Ben",
+  "greetings": [
+    "Hello, Baron",
+    "Greetings, Ancient Wise Master",
+    "Hail, Keeper of the Timesheets",
+    "All Rise for the Baron",
+    "Welcome, Oracle of Deadlines",
+    "The Prophecy Foretold Your Return",
+    "Behold, the Grand Overseer",
+    "Hark! The Baron Approaches",
+    "Salutations, Sage of the Spreadsheet",
+    "Your Humble Servant Reports"
+  ],
+  "status": "Available",
+  "now": {
+    "title": "Launching my live progress board",
+    "since": "2026-11-06"
+  },
+  "needs": [],
+  "logs": [
+    {
+      "date": "2026-11-06",
+      "hours": null,
+      "done": [
+        "Built this progress board so you can see my current work and daily logs at a glance"
+      ]
+    }
+  ],
+  "reports": {
+    "2026-11-01": [
+      "Built and launched a live progress board so Baron can check in on my work any time"
+    ]
+  }
+}
+</script>
+
+<style>
+/* Layout: black page. Medieval greeting on top, then boxes: Now + Today (with hours), weekly summaries, then one box per log. #bg will hold a live wallpaper later. */
+:root {
+  --bg: #000;
+  --box: rgba(255,255,255,.035);
+  --fg: #ece8de;
+  --muted: #8a8678;
+  --line: #2a2720;
+  --gold: #d9b45a;
+  --gold-hi: #fff1c4;
+  --f-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --f-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "Martian Mono", ui-monospace, Consolas, monospace;
+  --space: clamp(56px, 9vh, 96px); /* one gap between every main block */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font: 400 17px/1.55 var(--f-body); margin: 0; }
+.wrap {
+  max-width: 920px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.label { font: 400 11px/1 var(--f-mono); letter-spacing: .22em; text-transform: uppercase; color: var(--gold); margin: 0 0 16px; }
+.empty { color: var(--muted); font-style: italic; margin: 0; }
+
+.box {
+  background: var(--box); border: 1px solid var(--line); border-radius: 10px;
+  padding: clamp(18px, 3vw, 28px); min-width: 0;
+  box-shadow: inset 0 1px 0 rgba(217,180,90,.12);
+}
+.box ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+.box li::marker { color: var(--gold); }
+
+/* --- greeting --- */
+.greet {
+  font: 700 clamp(30px, 6.5vw, 62px)/1.1 var(--f-display); letter-spacing: .04em; margin: 0;
+  height: 2.4em; margin-block: 12vh 6vh; display: flex; /* fixed height: room for two lines, so changing greetings never shift the page */ align-items: center; justify-content: center; text-align: center; text-wrap: balance;
+  background: linear-gradient(100deg, var(--gold) 30%, var(--gold-hi) 50%, var(--gold) 70%) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shimmer 7s linear infinite;
+  transition: opacity 1.4s ease, filter 1.4s ease, letter-spacing 1.4s ease;
+}
+.greet.out { opacity: 0; filter: blur(12px); letter-spacing: .3em; }
+@keyframes shimmer { to { background-position: -250% 0; } }
+
+/* --- now + today --- */
+.top { display: grid; gap: var(--space); justify-items: center; }
+.top > .box { width: 100%; }
+.now-box { max-width: 600px; text-align: center; }
+.now-title { font: 700 clamp(24px, 3.6vw, 34px)/1.2 var(--f-body); margin: 0; text-wrap: balance; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px;
+  margin-block: calc(var(--space) * -0.45); /* sits between the two boxes without doubling the gap */
+  border: 1px solid var(--line); border-radius: 999px;
+  font: 600 13px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--fg);
+}
+.status-pill .sym { font: 400 16px/1 var(--f-display); color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+.needs-box { border-color: var(--gold); }
+.needs-box li { font-weight: 600; }.today-row { display: flex; gap: 24px; align-items: center; }
+.today-row > #today { flex: 1; min-width: 0; }
+.today-hours { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-left: 24px; border-left: 1px solid var(--line); min-width: 110px; text-align: center; }
+@media (max-width: 520px) {
+  .today-row { flex-direction: column; align-items: stretch; }
+  .today-hours { flex-direction: row; padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+.big { font: 700 40px/1 var(--f-body); color: var(--gold); font-variant-numeric: tabular-nums; }
+.big-label { font: 400 11px/1 var(--f-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+
+/* --- sections --- */
+section.block { padding-block: var(--space) 0; }
+h2 { font: 700 clamp(26px, 4.5vw, 40px)/1 var(--f-display); letter-spacing: .06em; color: var(--gold); margin: 0 0 24px; text-align: center; }
+.stack { display: grid; gap: 16px; }
+.summary-head, .log-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.summary-head h3, .log-head h3 { font: 600 19px/1.2 var(--f-body); margin: 0; }
+.summary-head .big { font-size: 30px; }
+.log-head .hrs { font: 600 15px/1 var(--f-mono); color: var(--gold); margin-left: auto; }
+details.box { padding-block: 0; }
+details.box > summary { list-style: none; cursor: pointer; padding-block: clamp(18px, 3vw, 24px); margin: 0; justify-content: flex-start; }
+details.box > summary::-webkit-details-marker { display: none; }
+details.box > summary::before { content: "+"; font: 600 18px/1 var(--f-mono); color: var(--gold); width: 1ch; }
+details.box[open] > summary::before { content: "−"; }
+details.box > ul { padding-bottom: clamp(18px, 3vw, 24px); }
+footer { padding-block: 72px 48px; text-align: center; font: 400 11px/1.6 var(--f-mono); color: var(--muted); letter-spacing: .1em; }
+
+@media (prefers-reduced-motion: reduce) { .greet { animation: none; transition: none; } }
+</style>
+
+<main class="wrap">
+  <h1 class="sr-only">Hello, Baron</h1>
+  <p class="greet" id="greet" aria-hidden="true"></p>
+
+  <div class="top">
+    <div class="box now-box">
+      <p class="label" id="now-label"></p>
+      <p class="now-title" id="now"></p>
+    </div>
+    <span class="status-pill" id="status" hidden></span>
+    <div class="box">
+      <p class="label" id="today-label"></p>
+      <div class="today-row">
+        <div id="today"></div>
+        <div class="today-hours"><span class="big" id="today-hours"></span><span class="big-label" id="today-hours-label"></span></div>
+      </div>
+    </div>
+    <div class="box needs-box" id="needs-box" hidden>
+      <p class="label" id="needs-label"></p>
+      <div id="needs"></div>
+    </div>
+  </div>
+
+  <section class="block">
+    <h2>Weekly Summary</h2>
+    <div class="stack" id="summaries"></div>
+  </section>
+
+  <section class="block">
+    <h2>The Ancient Logs</h2>
+    <div class="stack" id="logs"></div>
+  </section>
+</main>
+<footer>Daily hours are also sent by email</footer>
+
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const weekKey = s => { const d = parse(s); d.setDate(d.getDate() - d.getDay()); return iso(d); }; // Sunday (Israeli work week)
+const fmt = (s, o) => parse(s).toLocaleDateString('en-US', o);
+const total = list => list.some(l => l.hours != null) ? list.reduce((t, l) => t + (Number(l.hours) || 0), 0) : null;
+const bullets = arr => `<ul>${arr.map(d => `<li>${esc(d)}</li>`).join('')}</ul>`;
+console.assert(weekKey('2026-11-07') === '2026-11-01' && weekKey('2026-11-01') === '2026-11-01' && weekKey('2026-11-08') === '2026-11-08', 'weekKey broken');
+
+const STATUS_SYMBOLS = {
+  'Deep focus': '⚔', 'Available': '✦', 'In meetings': '♜', 'Researching': '☉',
+  'Wrapping up': '⌛', 'Out today': '☾', 'On leave': '⚓', 'Sick': '⚕',
+};
+
+const logs = [...D.logs].sort((a, b) => b.date.localeCompare(a.date));
+
+// rotating greeting
+const g = $('greet'); let gi = 0;
+g.textContent = D.greetings[0];
+setInterval(() => {
+  g.classList.add('out');
+  setTimeout(() => { gi = (gi + 1) % D.greetings.length; g.textContent = D.greetings[gi]; g.classList.remove('out'); }, 1400);
+}, 9000);
+
+// now
+$('now-label').textContent = `What ${D.name} is working on`;
+$('now').textContent = D.now.title;
+if (D.status) {
+  $('status').innerHTML = `<span>${esc(D.name)} is:</span><span class="sym" aria-hidden="true">${STATUS_SYMBOLS[D.status] || '✦'}︎</span>${esc(D.status)}`;
+  $('status').hidden = false;
+}
+if (D.needs?.length) {
+  $('needs-label').textContent = `What ${D.name} needs from you`;
+  $('needs').innerHTML = bullets(D.needs);
+  $('needs-box').hidden = false;
+}
+
+// today (falls back to the latest log so the box is never empty)
+const today = logs.find(l => l.date === iso(new Date()));
+const shown = today || logs[0];
+$('today-label').textContent = today || !shown ? `What ${D.name} has done today`
+  : `${D.name}'s last log · ${fmt(shown.date, { weekday: 'short', month: 'short', day: 'numeric' })}`;
+$('today').innerHTML = shown ? bullets(shown.done) : '<p class="empty">Nothing logged yet today.</p>';
+$('today-hours').textContent = shown && shown.hours != null ? shown.hours : '—';
+$('today-hours-label').textContent = today || !shown ? 'Hours today' : 'Hours that day';
+
+// weekly summaries
+const weeks = new Map();
+for (const l of logs) { const k = weekKey(l.date); if (!weeks.has(k)) weeks.set(k, []); weeks.get(k).push(l); }
+$('summaries').innerHTML = [...weeks].map(([k, list]) => {
+  const t = total(list);
+  return `<div class="box">
+    <div class="summary-head">
+      <h3>Week of ${fmt(k, { month: 'long', day: 'numeric', year: 'numeric' })}</h3>
+      <div><span class="big">${t ?? '—'}</span> <span class="big-label">hours total</span></div>
+    </div>
+    ${D.reports[k] ? bullets(D.reports[k]) : '<p class="empty">Summary coming at the end of the week.</p>'}
+  </div>`;
+}).join('') || '<p class="empty">No weeks logged yet.</p>';
+
+// logs, one collapsible box each (newest open)
+$('logs').innerHTML = logs.map((l, i) => `<details class="box"${i === 0 ? ' open' : ''}>
+  <summary class="log-head">
+    <h3>${fmt(l.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h3>
+    <span class="hrs">${l.hours != null ? l.hours + ' h' : ''}</span>
+  </summary>
+  ${bullets(l.done)}
+</details>`).join('') || '<p class="empty">No logs yet.</p>';
+</script>
