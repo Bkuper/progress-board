@@ -336,7 +336,10 @@ $('logs').innerHTML = logs.map((l, i) => `<details class="box"${i === 0 ? ' open
   const item = (k, x, y) => k ? (R(x, y, 3, 3, '#ffd36b'), R(x + 1, y + 1, 1, 1, '#b8862b'))
                               : (R(x, y, 3, 4, '#e9e4d8'), R(x, y + 1, 2, 1, '#8a8678'), R(x, y + 2, 2, 1, '#8a8678'));
   let bots = [], sparks = [];
-  const pick = b => { b.tx = rnd(4, W - 12); b.ty = rnd(4, H * .75); b.kind = Math.random() < .5 ? 1 : 0; b.state = 'go'; };
+  // bots stay below the greeting; every target is under it, so their straight paths never cross it
+  const minY = () => Math.max(4, document.getElementById('greet').getBoundingClientRect().bottom / S + 2);
+  const lowY = () => { const lo = minY(); return rnd(lo, Math.max(lo, H * .75)); };
+  const pick = b => { b.tx = rnd(4, W - 12); b.ty = lowY(); b.kind = Math.random() < .5 ? 1 : 0; b.state = 'go'; };
   const bot = (b, t) => {
     const y = b.y + Math.sin(t / 300 + b.ph) * 1.5;
     BOT.forEach((row, r) => [...row].forEach((ch, c) => {
@@ -381,7 +384,7 @@ $('logs').innerHTML = logs.map((l, i) => `<details class="box"${i === 0 ? ' open
     S = innerWidth < 700 ? 3 : 4;
     W = cv.width = Math.ceil(innerWidth / S); H = cv.height = Math.ceil(innerHeight / S);
     ox = W - 48; oy = H - 30;
-    if (!bots.length) bots = Array.from({ length: W < 200 ? 3 : 5 }, () => { const b = { x: rnd(0, W), y: rnd(0, H * .7), ph: rnd(0, 6) }; pick(b); return b; });
+    if (!bots.length) bots = Array.from({ length: W < 200 ? 3 : 5 }, () => { const b = { x: rnd(0, W), y: lowY(), ph: rnd(0, 6) }; pick(b); return b; });
     if (still) draw(0);
   };
   fit(); addEventListener('resize', fit);  if (!still) {
