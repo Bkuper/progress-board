@@ -70,7 +70,7 @@
 /* Layout: black page. Medieval greeting on top, then boxes: Now + Today (with hours), weekly summaries, then one box per log. #bg will hold a live wallpaper later. */
 :root {
   --bg: #000;
-  --box: rgba(255,255,255,.035);
+  --box: rgba(14,13,11,.9); /* near-opaque so the pixel wallpaper never hurts readability */
   --fg: #ece8de;
   --muted: #8a8678;
   --line: #2a2720;
@@ -84,6 +84,7 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; pointer-events: none; }
 body { background: var(--bg); color: var(--fg); font: 400 17px/1.55 var(--f-body); margin: 0; }
 .wrap {
   max-width: 920px; margin: 0 auto;
@@ -156,6 +157,7 @@ footer { padding-block: 72px 48px; text-align: center; font: 400 11px/1.6 var(--
 @media (prefers-reduced-motion: reduce) { .greet { animation: none; transition: none; } }
 </style>
 
+<canvas id="bg" aria-hidden="true"></canvas>
 <main class="wrap">
   <h1 class="sr-only">Hello, Baron</h1>
   <p class="greet" id="greet" aria-hidden="true"></p>
@@ -269,4 +271,114 @@ $('logs').innerHTML = logs.map((l, i) => `<details class="box"${i === 0 ? ' open
   </summary>
   ${bullets(l.done)}
 </details>`).join('') || '<p class="empty">No logs yet.</p>';
+</script>
+
+<script>
+// 8-bit wallpaper: Ben at his desk (bottom right), robot agents fetching tasks from around the screen and dropping them in his in-tray.
+(() => {
+  const cv = document.getElementById('bg'), cx = cv.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let S, W, H, ox, oy;
+  const R = (x, y, w, h, c) => { cx.fillStyle = c; cx.fillRect(Math.round(x), Math.round(y), w, h); };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+
+  // --- Ben at his desk, drawn in art pixels from (ox, oy); 44 x 28 ---
+  let stack = 2, lastProcess = 0;
+  const desk = t => {
+    const f = Math.floor(t / 170) % 2;               // typing frame
+    cx.globalAlpha = .07 + .02 * Math.sin(t / 700);   // monitor glow
+    R(ox + 18, oy - 3, 22, 20, '#ffd36b');
+    cx.globalAlpha = 1;
+    // chair
+    R(ox + 4, oy + 8, 2, 11, '#3b3630'); R(ox + 4, oy + 17, 10, 2, '#3b3630');
+    R(ox + 8, oy + 19, 2, 7, '#2c2824'); R(ox + 5, oy + 26, 8, 1, '#2c2824');
+    R(ox + 5, oy + 27, 1, 1, '#111'); R(ox + 12, oy + 27, 1, 1, '#111');
+    // Ben
+    R(ox + 7, oy + 15, 9, 2, '#2b2b35');              // thigh
+    R(ox + 14, oy + 17, 2, 8, '#2b2b35');             // shin
+    R(ox + 14, oy + 25, 4, 2, '#151515');             // shoe
+    R(ox + 7, oy + 9, 6, 7, '#4a5a7a');               // shirt
+    R(ox + 9, oy + 8, 3, 1, '#e0b48a');               // neck
+    R(ox + 8, oy + 2, 6, 6, '#e0b48a');               // head
+    R(ox + 7, oy + 1, 7, 2, '#3a2a1e'); R(ox + 7, oy + 1, 2, 6, '#3a2a1e'); // hair
+    R(ox + 12, oy + 4, 1, 1, '#151515');              // eye
+    R(ox + 11, oy + 10, 3, 2, '#4a5a7a');             // upper arm
+    R(ox + 13, oy + 12, 6, 2, '#e0b48a');             // forearm
+    R(ox + 19, oy + 12 + f, 1, 1, '#e0b48a');         // tapping fingers
+    // desk
+    R(ox + 17, oy + 15, 27, 1, '#7a5634'); R(ox + 17, oy + 16, 27, 1, '#4a3220');
+    R(ox + 18, oy + 17, 2, 10, '#4a3220'); R(ox + 40, oy + 17, 2, 10, '#4a3220');
+    R(ox + 17, oy + 14, 7, 1, '#8a8678');             // keyboard
+    // monitor
+    R(ox + 24, oy + 2, 12, 10, '#2a2a2e'); R(ox + 25, oy + 3, 10, 8, '#f0d27a');
+    const off = Math.floor(t / 350);
+    for (let i = 0; i < 4; i++) R(ox + 26, oy + 4 + i * 2, 2 + ((i + off) * 7) % 7, 1, '#7a5a1a');
+    R(ox + 29, oy + 12, 2, 2, '#2a2a2e'); R(ox + 27, oy + 14, 6, 1, '#2a2a2e');
+    // mug + steam
+    R(ox + 34, oy + 12, 3, 3, '#c9c3b4'); R(ox + 37, oy + 13, 1, 1, '#c9c3b4');
+    cx.globalAlpha = .5; R(ox + 35, oy + 10 - (Math.floor(t / 400) % 3), 1, 1, '#c9c3b4'); cx.globalAlpha = 1;
+    // in-tray of delivered tasks
+    for (let i = 0; i < stack; i++) R(ox + 38, oy + 14 - i, 4, 1, i % 2 ? '#e9e4d8' : '#cfc8b8');
+  };
+
+  // --- robot agents ---
+  const BOT = ['...a...', '...m...', '.bbbbb.', '.bebeb.', '.bbbbb.', 'm.bdb.m'];
+  const COL = { m: '#6e7380', b: '#c9ccd4', e: '#ffd36b', d: '#8a90a0' };
+  const item = (k, x, y) => k ? (R(x, y, 3, 3, '#ffd36b'), R(x + 1, y + 1, 1, 1, '#b8862b'))
+                              : (R(x, y, 3, 4, '#e9e4d8'), R(x, y + 1, 2, 1, '#8a8678'), R(x, y + 2, 2, 1, '#8a8678'));
+  let bots = [], sparks = [];
+  const pick = b => { b.tx = rnd(4, W - 12); b.ty = rnd(4, H * .75); b.kind = Math.random() < .5 ? 1 : 0; b.state = 'go'; };
+  const bot = (b, t) => {
+    const y = b.y + Math.sin(t / 300 + b.ph) * 1.5;
+    BOT.forEach((row, r) => [...row].forEach((ch, c) => {
+      if (ch === '.') return;
+      R(b.x + c, y + r, 1, 1, ch === 'a' ? (Math.floor(t / 400 + b.ph) % 2 ? '#ffd36b' : '#ff5a4a') : COL[ch]);
+    }));
+    R(b.x + 2, y + 6, 1, 1, Math.random() < .5 ? '#ff9b3d' : '#ffe08a'); // thrusters
+    R(b.x + 4, y + 6, 1, 1, Math.random() < .5 ? '#ff9b3d' : '#ffe08a');
+    if (b.state === 'work') {                                          // task glowing below, gears orbiting
+      if (Math.floor(t / 150) % 2) item(b.kind, b.x + 2, y + 9);
+      for (let k = 0; k < 3; k++) R(b.x + 3 + Math.cos(t / 200 + k * 2.1) * 5, y + 10 + Math.sin(t / 200 + k * 2.1) * 2, 1, 1, '#ffd36b');
+    }
+    if (b.state === 'deliver') item(b.kind, b.x + 2, y + 7);
+  };
+  const step = (b, dt) => {
+    const dx = b.tx - b.x, dy = b.ty - b.y, d = Math.hypot(dx, dy), v = 24 * dt;
+    if (d <= v) { b.x = b.tx; b.y = b.ty; return true; }
+    b.x += dx / d * v; b.y += dy / d * v; return false;
+  };
+  const update = (dt, t) => {
+    for (const b of bots) {
+      if (b.state === 'go' && step(b, dt)) { b.state = 'work'; b.wait = rnd(1.5, 3.5); }
+      else if (b.state === 'work' && (b.wait -= dt) <= 0) { b.state = 'deliver'; b.tx = ox + 37 + rnd(-1, 1); b.ty = oy + 4 - stack; }
+      else if (b.state === 'deliver' && step(b, dt)) {
+        stack = Math.min(stack + 1, 9);
+        for (let i = 0; i < 8; i++) sparks.push({ x: ox + 40, y: oy + 13 - stack, vx: rnd(-20, 20), vy: rnd(-30, -5), life: rnd(.4, .8) });
+        b.state = 'rest'; b.wait = rnd(.3, 1.2);
+      }
+      else if (b.state === 'rest' && (b.wait -= dt) <= 0) pick(b);
+    }
+    if (stack > 0 && t - lastProcess > 3500) { stack--; lastProcess = t; } // Ben works through the pile
+    sparks = sparks.filter(s => (s.life -= dt) > 0);
+    for (const s of sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 60 * dt; }
+  };
+  const draw = t => {
+    cx.clearRect(0, 0, W, H);
+    desk(t);
+    bots.forEach(b => bot(b, t));
+    sparks.forEach(s => R(s.x, s.y, 1, 1, '#ffd36b'));
+  };
+  const fit = () => {
+    S = innerWidth < 700 ? 3 : 4;
+    W = cv.width = Math.ceil(innerWidth / S); H = cv.height = Math.ceil(innerHeight / S);
+    ox = W - 48; oy = H - 30;
+    if (!bots.length) bots = Array.from({ length: W < 200 ? 3 : 5 }, () => { const b = { x: rnd(0, W), y: rnd(0, H * .7), ph: rnd(0, 6) }; pick(b); return b; });
+    if (still) draw(0);
+  };
+  fit(); addEventListener('resize', fit);  if (!still) {
+    let last = 0;
+    const loop = now => { update(last ? Math.min(.05, (now - last) / 1000) : 0, now); last = now; draw(now); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+})();
 </script>
